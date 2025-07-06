@@ -10,21 +10,20 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import undetected_chromedriver as uc
 
 st.set_page_config(page_title="Super Investor Screener", layout="wide")
 
 @st.cache_data(ttl=3600)
 def get_dataroma_tickers():
-    options = Options()
-    options.add_argument("--headless=new")  # run browser in headless mode
+    options = uc.ChromeOptions()
+    options.add_argument("--headless=new")  # or remove this line to see the browser
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-    url = "https://www.dataroma.com/m/grid.php"
-    driver.get(url)
-    time.sleep(3)  # wait for content to load
+    driver = uc.Chrome(options=options)
+    driver.get("https://www.dataroma.com/m/grid.php")
+    time.sleep(5)  # Let page load
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
     driver.quit()
@@ -34,8 +33,8 @@ def get_dataroma_tickers():
         return pd.DataFrame()
 
     rows = table.find_all("tr")[1:]
-
     stocks = []
+
     for row in rows:
         cols = row.find_all("td")
         if len(cols) >= 4:
