@@ -1,5 +1,7 @@
 streamlit
-beautifulsoup4
-yfinance
 pandas
 requests
+yfinance
+beautifulsoup4
+selenium
+webdriver-manager
