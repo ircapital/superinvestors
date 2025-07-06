@@ -5,27 +5,39 @@ from bs4 import BeautifulSoup
 import yfinance as yf
 from datetime import datetime
 import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 st.set_page_config(page_title="Super Investor Screener", layout="wide")
 
 @st.cache_data(ttl=3600)
 def get_dataroma_tickers():
+    options = Options()
+    options.add_argument("--headless=new")  # run browser in headless mode
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
     url = "https://www.dataroma.com/m/grid.php"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36"
-    }
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    driver.get(url)
+    time.sleep(3)  # wait for content to load
 
-    table = soup.find('table', {'class': 'grid'})
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
+
+    table = soup.find("table", {"class": "grid"})
     if table is None:
-        return pd.DataFrame()  # return empty DataFrame on failure
+        return pd.DataFrame()
 
-    rows = table.find_all('tr')[1:]  # skip header
+    rows = table.find_all("tr")[1:]
 
     stocks = []
     for row in rows:
-        cols = row.find_all('td')
+        cols = row.find_all("td")
         if len(cols) >= 4:
             ticker = cols[0].text.strip()
             name = cols[1].text.strip()
