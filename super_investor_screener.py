@@ -9,7 +9,6 @@ import time
 st.set_page_config(page_title="Super Investor Screener", layout="wide")
 
 @st.cache_data(ttl=3600)
-@st.cache_data(ttl=3600)
 def get_dataroma_tickers():
     url = "https://www.dataroma.com/m/grid.php"
     headers = {
@@ -20,24 +19,24 @@ def get_dataroma_tickers():
 
     table = soup.find('table', {'class': 'grid'})
     if table is None:
-        st.error("Failed to fetch data from Dataroma. Table not found.")
-        return pd.DataFrame()
+        return pd.DataFrame()  # return empty DataFrame on failure
 
     rows = table.find_all('tr')[1:]  # skip header
 
     stocks = []
     for row in rows:
         cols = row.find_all('td')
-        ticker = cols[0].text.strip()
-        name = cols[1].text.strip()
-        investors = cols[2].text.strip()
-        price = cols[3].text.strip()
-        stocks.append({
-            "Ticker": ticker,
-            "Company": name,
-            "# of Investors": int(investors),
-            "Holding Price": price.replace("$", "").replace(",", "")
-        })
+        if len(cols) >= 4:
+            ticker = cols[0].text.strip()
+            name = cols[1].text.strip()
+            investors = cols[2].text.strip()
+            price = cols[3].text.strip()
+            stocks.append({
+                "Ticker": ticker,
+                "Company": name,
+                "# of Investors": int(investors),
+                "Holding Price": price.replace("$", "").replace(",", "")
+            })
 
     return pd.DataFrame(stocks)
 
@@ -74,6 +73,10 @@ st.caption("Scraped from Dataroma and enriched with Yahoo Finance")
 st.info("Fetching data from Dataroma...")
 df = get_dataroma_tickers()
 
+if df.empty:
+    st.error("⚠️ Could not retrieve data from Dataroma. The page may have blocked the scraper.")
+    st.stop()
+
 enriched_data = []
 progress = st.progress(0)
 
@@ -94,10 +97,13 @@ result_df = pd.DataFrame(enriched_data)
 cols = ["Ticker", "Company", "# of Investors", "Holding Price", "Current Price",
         "52W Low", "52W High", "% Above 52W Low", "% Below 52W High"]
 
-result_df["Holding Price"] = pd.to_numeric(result_df["Holding Price"], errors="coerce")
-result_df["Current Price"] = pd.to_numeric(result_df["Current Price"], errors="coerce")
+if not result_df.empty:
+    result_df["Holding Price"] = pd.to_numeric(result_df["Holding Price"], errors="coerce")
+    result_df["Current Price"] = pd.to_numeric(result_df["Current Price"], errors="coerce")
 
-st.dataframe(result_df[cols].sort_values(by="# of Investors", ascending=False), use_container_width=True)
+    st.dataframe(result_df[cols].sort_values(by="# of Investors", ascending=False), use_container_width=True)
 
-csv = result_df[cols].to_csv(index=False)
-st.download_button("📥 Download CSV", csv, "super_investor_stocks.csv", "text/csv")
+    csv = result_df[cols].to_csv(index=False)
+    st.download_button("📥 Download CSV", csv, "super_investor_stocks.csv", "text/csv")
+else:
+    st.warning("No stock data available to display.")
