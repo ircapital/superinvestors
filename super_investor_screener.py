@@ -9,12 +9,20 @@ import time
 st.set_page_config(page_title="Super Investor Screener", layout="wide")
 
 @st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600)
 def get_dataroma_tickers():
     url = "https://www.dataroma.com/m/grid.php"
-    response = requests.get(url)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     table = soup.find('table', {'class': 'grid'})
+    if table is None:
+        st.error("Failed to fetch data from Dataroma. Table not found.")
+        return pd.DataFrame()
+
     rows = table.find_all('tr')[1:]  # skip header
 
     stocks = []
@@ -32,6 +40,7 @@ def get_dataroma_tickers():
         })
 
     return pd.DataFrame(stocks)
+
 
 @st.cache_data(ttl=3600)
 def get_stock_data(ticker):
